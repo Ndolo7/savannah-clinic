@@ -1,8 +1,8 @@
 name: Deploy Next.js site to Pages
 
 on:
-  pull_request:
-    branches: ["main"] # Change this to "master" if that is your main branch
+  push:
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -23,11 +23,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         
-      - name: Setup Node
+      - name: Setup Pages
         uses: actions/configure-pages@v5
+        
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-node: '20'
+          node-version: '20'
           cache: npm
           
       - name: Install dependencies
@@ -44,3 +46,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+

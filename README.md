@@ -2,6 +2,13 @@
 
 Live Link : [https://savannah-clinic-omega.vercel.app/](https://savannah-clinic-omega.vercel.app/)
 
+Run locally : 
+
+```bash
+npm install
+npm run dev
+```
+
 ## Design and architecture
 
 The screen is divided into four components:

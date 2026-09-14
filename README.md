@@ -1,11 +1,14 @@
 # Savannah Clinic
 
+Live Link : [https://savannah-clinic-omega.vercel.app/](https://savannah-clinic-omega.vercel.app/)
+
 ## Design and architecture
 
 The screen is divided into four components:
+
 - `Login` owns the sign-in form.
 - `ClinicConsole` owns the authenticated shell, URL-driven toolbar, request lifecycle, and pagination table rows are rendered inside the inventory section and link to the shareable item route.
-- `app/items/[id]/page.tsx` owns item detail loading and stock correction. 
+- `app/items/[id]/page.tsx` owns item detail loading and stock correction.
 - `lib/dummyjson.ts` is the data boundary, keeping API URLs, request errors, and response types out of UI components.
 
 ### State ownership
@@ -20,12 +23,16 @@ The client to use `fetch` with `cache: 'no-store'`, so inventory and detail scre
 
 ### Visual system
 
-Use a small tokenized palette in `app/globals.css`: ink, muted slate, paper, line, and a teal brand accent. Use Geist Sans typography for body and Geist Mono for compact metadata. 
+Use a small tokenized palette in `app/globals.css`: ink, muted slate, paper, line, and a teal brand accent. Use Geist Sans typography for body and Geist Mono for compact metadata.
 Use Tailwind utility classes plus component CSS for spacing the dense inventory table, with flexbox for primary layout and a responsive table-to-card treatment at narrow widths. No component-library defaults are relied on for the product surface.
 
 ### Accessibility
 
 Implement landmarks, labelled inputs/selects, visible keyboard focus, a real table on desktop, `aria-live` status messaging, `role="alert"` error states, descriptive link and button labels, and a skip link. Loading and empty states to be explicit rather than silent. Test the layout at 360px to ensure it does not require pointer-only controls.
+
+> **AI Usage Note (Design & Architecture):** AI was used to  plan URL-driven query synchronization patterns, design responsive table-to-card mobile layouts.
+
+---
 
 ## Decision log
 
@@ -34,3 +41,36 @@ Implement landmarks, labelled inputs/selects, visible keyboard focus, a real tab
 3. **`cache: 'no-store'` instead of a client cache.** A cache would make the inventory feel fast but could show stale counts after a correction. The brief values correct stock over cache hits, so retryable no-store requests are the deliberate trade-off.
 4. **Inline stock correction instead of optimistic mutation.** An optimistic update would look responsive but would be misleading if DummyJSON rejects or simulates a failure. The form stays in a saving state until the API returns and preserves the last confirmed value on error.
 
+## Deployment & CI/CD Pipeline
+
+- **Public Application URL:** [https://savannah-clinic-omega.vercel.app/](https://savannah-clinic-omega.vercel.app/)
+- **Deployment Trigger Branch:** `main`
+
+### Pipeline Overview
+
+The project uses GitHub Actions for continuous integration and automated deployment:
+
+1. **Pull Request Quality Pipeline (`.github/workflows/ci.yml`):**
+   - Triggers automatically on every pull request targeting `main`.
+   - Checks out the complete repository history with full depth (`fetch-depth: 0`).
+   - Executes validation steps in sequence: commit message convention checks, code formatting verification, static code linting, automated unit test suites, and production static export building.
+   - If any check fails, the pipeline run fails, preventing the pull request from being merged.
+
+2. **Continuous Deployment Pipeline (`.github/workflows/deploy.yml`):**
+   - Triggers automatically when a pull request is merged into `main` (via push event to `main`).
+   - Runs the test suite and compiles the static production build into the `./out` directory.
+   - Deploys the exported static site directly to Vercel.
+
+### Checks That Can Block a Merge
+
+A pull request cannot be merged if any of the following checks fail:
+
+- **Commit Message Check (`wagoid/commitlint-github-action@v6`):** Validates that all commit messages in the pull request conform to the [Conventional Commits](https://www.conventionalcommits.org/) specification using `@commitlint/config-conventional`.
+- **Formatter Check (`npm run format:check`):** Verifies code formatting across the repository using Prettier against project standards.
+- **Linter Check (`npm run lint`):** Checks TypeScript and Next.js code quality rules with ESLint.
+- **Test Suite (`npm run test`):** Executes all unit tests with Vitest (`lib/dummyjson.test.ts`).
+- **Static Export Build (`npm run build`):** Verifies that Next.js static HTML export compiles without TypeScript or rendering errors.
+
+> **AI Usage Note (Deployment & CI/CD):** AI was used to set up Commitlint integration for pull requests, define `.prettierignore` rules to avoid lockfile and build cache discrepancies, and configure static export parameters for Vercel deployment.
+
+---

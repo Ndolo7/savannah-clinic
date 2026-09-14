@@ -1,8 +1,11 @@
 # Savannah Clinic
 
-Live Link : [https://savannah-clinic-omega.vercel.app/](https://savannah-clinic-omega.vercel.app/)
+Live Link : 
 
-Run locally : 
+- [https://ndolo7.github.io/savannah-clinic/](https://ndolo7.github.io/savannah-clinic/)
+- [https://savannah-clinic-omega.vercel.app/](https://savannah-clinic-omega.vercel.app/)
+
+Run locally :
 
 ```bash
 npm install
@@ -37,8 +40,6 @@ Use Tailwind utility classes plus component CSS for spacing the dense inventory 
 
 Implement landmarks, labelled inputs/selects, visible keyboard focus, a real table on desktop, `aria-live` status messaging, `role="alert"` error states, descriptive link and button labels, and a skip link. Loading and empty states to be explicit rather than silent. Test the layout at 360px to ensure it does not require pointer-only controls.
 
-> **AI Usage Note (Design & Architecture):** AI was used to  plan URL-driven query synchronization patterns, design responsive table-to-card mobile layouts.
-
 ---
 
 ## Decision log
@@ -47,6 +48,10 @@ Implement landmarks, labelled inputs/selects, visible keyboard focus, a real tab
 2. **Abort plus request identity for search races.** Debounce alone reduces traffic but cannot prevent an older slow response from winning. Each request is both abortable and tagged with a request id, so the UI remains correct even when the mock service ignores cancellation.
 3. **`cache: 'no-store'` instead of a client cache.** A cache would make the inventory feel fast but could show stale counts after a correction. The brief values correct stock over cache hits, so retryable no-store requests are the deliberate trade-off.
 4. **Inline stock correction instead of optimistic mutation.** An optimistic update would look responsive but would be misleading if DummyJSON rejects or simulates a failure. The form stays in a saving state until the API returns and preserves the last confirmed value on error.
+
+> **AI Usage Note (Decision Log):** AI was used to evaluate architecture trade-offs between local reducer state versus URL state reflection, and formulate debouncing combined with monotonic sequence tagging for race-condition mitigation.
+
+---
 
 ## Deployment & CI/CD Pipeline
 
@@ -66,7 +71,7 @@ The project uses GitHub Actions for continuous integration and automated deploym
 2. **Continuous Deployment Pipeline (`.github/workflows/deploy.yml`):**
    - Triggers automatically when a pull request is merged into `main` (via push event to `main`).
    - Runs the test suite and compiles the static production build into the `./out` directory.
-   - Deploys the exported static site directly to Vercel.
+   - Deploys the exported static site directly to GitHub Pages (and Vercel on push).
 
 ### Checks That Can Block a Merge
 
@@ -78,6 +83,34 @@ A pull request cannot be merged if any of the following checks fail:
 - **Test Suite (`npm run test`):** Executes all unit tests with Vitest (`lib/dummyjson.test.ts`).
 - **Static Export Build (`npm run build`):** Verifies that Next.js static HTML export compiles without TypeScript or rendering errors.
 
-> **AI Usage Note (Deployment & CI/CD):** AI was used to set up Commitlint integration for pull requests, define `.prettierignore` rules to avoid lockfile and build cache discrepancies, and configure static export parameters for Vercel deployment.
+> **AI Usage Note (Deployment & CI/CD):** AI was used to set up Commitlint integration for pull requests, define `.prettierignore` rules to avoid lockfile and build cache discrepancies, and configure static export parameters for both GitHub Pages and Vercel deployments.
 
 ---
+
+## AI Reflection & Engineering Evaluation
+
+### 1. Tools & Workflow Structure
+- **Tools used:** Antigravity IDE (agentic pair programming with direct terminal execution and workspace inspection).
+- **Workflow methodology:** Did not use an external framework (e.g. BMAD, Superpowers, Spec Kit). Instead, structured the work through an iterative **Spec-to-Verification loop**:
+  - *Spec breakdown:* Outlined interface contracts and routing constraints before touching code.
+  - *Interactive planning:* Used structured implementation plans with explicit checkpoints before modifying files.
+  - *Continuous local verification:* Ran linters, formatters, Vitest, and Next.js static builds in WSL after each step to catch regressions immediately.
+
+### 2. AI Suggestion That Improved the Work
+- **Example:** Resolving Next.js static export build failures for dynamic route `/items/[id]`.
+- **Prompt:** *"Resolve Next.js build error: App pages cannot use both 'use client' and export function generateStaticParams()."*
+- **Outcome:** AI recommended separating the Server Component boundary (`app/items/[id]/page.tsx` exporting `generateStaticParams()` to pre-fetch product IDs) from the interactive client UI (`components/item-detail.tsx`), enabling static pre-rendering of all 194 product detail pages at build time while keeping client-side stock corrections functional.
+
+### 3. AI Output That Was Wrong, Incomplete, or Subtly Bad
+- **Example:** Missing GitHub Pages subpath `basePath` configuration.
+- **The flaw:** AI initially generated standard static export settings assuming root-domain hosting (`/_next/...`). It worked on Vercel (`savannah-clinic-omega.vercel.app`), but broke completely on GitHub Pages (`ndolo7.github.io/savannah-clinic`), returning 404 for all CSS and JS chunks and leaving the page indefinitely frozen on `<Suspense>`'s static fallback (`Loading console…`).
+- **How it was caught:** Inspected browser DevTools network tab on the live GitHub Pages site, diagnosed the 404s on `/_next/...`, and corrected `next.config.mjs` to dynamically inject `basePath: '/savannah-clinic'` when `GITHUB_PAGES=true`, alongside adding `.nojekyll`.
+
+### 4. Decisions Made Without AI
+- **URL search params as the single source of truth:** Decided on `useSearchParams` for query, category, sort, and pagination instead of React Context or Zustand. In clinic stock workflows, staff regularly share links to specific filtered inventory states; URL-driven state makes every view bookmarkable and shareable by default.
+- **Pessimistic inventory stock corrections:** Rejected optimistic UI updates for stock corrections. In a clinical inventory system, displaying an updated stock count before the API confirms the write risks misleading clinical staff if a network failure occurs. The UI deliberately shows an inline saving state until confirmed.
+
+### 5. Part of the Codebase Hardest to Defend
+- **Monolithic `components/clinic-console.tsx`:**
+  - **Why:** The component spans ~400 lines and mixes authentication hydration, search debouncing, URL parameter synchronization, table rendering, sort dropdowns, and responsive card layouts.
+  - **Defense difficulty:** Presentational markup is tightly coupled with URL routing and abort logic, making isolated unit testing of the table rows or toolbar cumbersome without extensive router mocking. Extracting discrete subcomponents (`InventoryTable`, `ConsoleToolbar`, `AuthGuard`) would be the necessary refactor.

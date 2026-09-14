@@ -303,12 +303,8 @@ export default function ClinicConsole() {
             >
               {SORTS.map((item) => (
                 <Fragment key={item.value}>
-                  <option value={`${item.value}:asc`}>
-                    {item.label} A–Z
-                  </option>
-                  <option value={`${item.value}:desc`}>
-                    {item.label} Z–A
-                  </option>
+                  <option value={`${item.value}:asc`}>{item.label} A–Z</option>
+                  <option value={`${item.value}:desc`}>{item.label} Z–A</option>
                 </Fragment>
               ))}
             </select>
